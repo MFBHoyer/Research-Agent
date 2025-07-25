@@ -1,0 +1,350 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        -464
+      ],
+      "id": "007b1c19-3eb9-4459-8cb0-f7c86772fd30",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        -192
+      ],
+      "id": "05c9fada-9ac1-4589-932e-41ded6235676",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "S7BUgSwMpXOhIXGo",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "CloudScan@hoyermotors.com",
+        "toEmail": "mfb@hoyermotors.com",
+        "subject": "=",
+        "html": "={{ $json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        560,
+        -384
+      ],
+      "id": "bec1835d-80dd-4b63-b633-3f579dca0c36",
+      "name": "Send email",
+      "webhookId": "aced1f53-ff11-4ecc-97d9-6b1c0420ea68",
+      "credentials": {
+        "smtp": {
+          "id": "5DExugoZvsu9JUp5",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "markdownToHtml",
+        "markdown": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -384
+      ],
+      "id": "bed71f56-f681-421f-a25e-7131bbd0c919",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        352
+      ],
+      "id": "bbd207ab-cfd7-4db7-a2ee-36c8e245d4f3",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "S7BUgSwMpXOhIXGo",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -176
+      ],
+      "id": "3c5ef61c-442c-43b3-9e6a-63eb80aefaab",
+      "name": "Ollama Chat Model2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "S7BUgSwMpXOhIXGo",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are a cybersecurity research coordination agent responsible for breaking down a user’s query and assigning research tasks to subagents. Your goal is to analyze the query, determine the best research strategy (depth-first, breadth-first, or straightforward), and delegate clear, well-scoped tasks to subagents who will perform the actual research.\nThe research topic is cybersecurity\n\nYou do not generate the final output or report. Your sole responsibility is to create an efficient, well-reasoned plan and deploy the appropriate number of subagents with specific instructions to gather all the information needed to answer the user’s question thoroughly and accurately. Use Iterations for the agents where appropriate, avoid unnecessary overlap, and make sure your instructions are clear, specific, and optimized for quality and efficiency.",
+        "options": {
+          "systemMessage": "You are a research coordination agent responsible for breaking down a user’s query and assigning research tasks to subagents. Your goal is to analyze the query, determine the best research strategy (depth-first, breadth-first, or straightforward), and delegate clear, well-scoped tasks to subagents who will perform the actual research.\n\nYou do not generate the final output or report. Your sole responsibility is to create an efficient, well-reasoned plan and deploy the appropriate number of subagents with specific instructions to gather all the information needed to answer the user’s question thoroughly and accurately. Use Iterations for the agents where appropriate, avoid unnecessary overlap, and make sure your instructions are clear, specific, and optimized for quality and efficiency.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -608,
+        192
+      ],
+      "id": "b0d7e597-153f-412c-a9a8-e442e5f449ae",
+      "name": "Planner"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is your data.  Use **only** this—anything else is forbidden:\n\n```json\n{{ $json.intermediateSteps[0].observation }}\nBegin your report now, following the system instructions to the letter.",
+        "options": {
+          "systemMessage": "You are a cybersecurity research writer.  Forget everything you “know” about cybersecurity; you only have access to the data in the injected JSON under `results`.  If you reference anything not in that array, you must respond with:\n\nError: coverage gap—insufficient data.\n\nYou must output **only** a Markdown report in the exact structure below.  No intros, no reflections, no out‑of‑character comments, no hallucinations, no use of your training data.\n\nReport Structure:\n1. `# Title`  \n2. `## Abstract` (500–750 words summarizing exactly the items in `results`)  \n3. `## Introduction` (define scope, timeframe, data source)  \n4. `## Thematic Findings`    \n   - Break into subsections (e.g., Vulnerabilities, APT Activity, Breaches) (400-500 words per subsection)\n   - For each and **every** `results[i]` entry:  \n     - **Issue Explanation**: use only its `content` field, verbatim or paraphrased.  \n     - **Source**: cite its `title` and `url`.  \n     - If `content` is blank or too short, write  \n       `**Coverage Gap**: missing detail—recommend additional logs/policy review.`  \n5. `## Synthesis of Insights` (cross‑reference only the given `results` items)  \n6. `## Conclusion & Recommendations` (draw only on those inputs)\n\n**Strict rules**:\n- You may use nothing but the JSON under `results`.  \n- Do **not** use an `\"answer\"` field, internal memory, or any external knowledge.  \n- If you cannot cover an item because of missing fields, mark it as a coverage gap and stop.  \n- Output valid Markdown only.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        80,
+        -384
+      ],
+      "id": "c57d394e-47fa-477f-82fd-c316e5b27e6f",
+      "name": "Writer"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Use the TavilySearch tool to gather as many relevant findings as possible from the past 30 days of cybersecurity news.\n\nFocus on:\n\nNew vulnerabilities\n\nThreat intelligence\n\nNation-state/APT activity\n\nMajor patch advisories\n\nData breaches and security developments\n\nFor each finding, output the result in structured Markdown, using this exact format:\n### [Title]\n**URL**: [link]\n**Summary**:  \n[300–800 word detailed summary of the article]\n\nRules:\n\nOnly use the TavilySearch tool to gather information.\n\nDo not fabricate summaries or entries.\n\nDo not summarize the entire list; provide one Markdown entry per article.\n\nDo not include introductory or concluding text — only structured Markdown output.\n\nYou may gather up to 10 high-quality results.",
+        "options": {
+          "systemMessage": "You are a cybersecurity research subagent.\nYour task is to gather high-quality cybersecurity news and intelligence from the past 30 days using the TavilySearch tool.\n\nYou will receive structured TavilySearch output, which includes:\n\nA list of articles (title, url, content)\n\nYour job is to:\n\nLoop through the top 5–10 high-quality results.\n\nFor each result, extract:\n\nTitle of the article\n\nURL\n\nA detailed summary of the content (at least 300 words, up to 800)\n\nFormat the response in structured Markdown like this:\n### [Title]\n**URL**: [URL]\n**Summary**:  \n[300–800 word detailed summary here]\n\nRules:\n\nDo not add commentary, intros, or conclusions.\n\nDo not summarize across multiple results — summarize each one separately.\n\nDo not invent content — only summarize based on content from the tool output.",
+          "maxIterations": 10,
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -304,
+        -384
+      ],
+      "id": "20bf19f9-772f-4645-9bc8-0699b8751c44",
+      "name": "Research Agent"
+    },
+    {
+      "parameters": {
+        "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Query', ``, 'string') }}",
+        "options": {
+          "topic": "news",
+          "search_depth": "basic",
+          "chunks_per_source": 3,
+          "max_results": 20,
+          "time_range": "month",
+          "days": 14,
+          "include_answer": "basic",
+          "include_domains": [
+            "https://www.crowdstrike.com/en-us/",
+            "https://thehackernews.com/",
+            "https://www.ninjaone.com/blog/"
+          ],
+          "exclude_domains": [
+            "*"
+          ]
+        }
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavilyTool",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        -192
+      ],
+      "id": "280d0d40-82f8-46ce-b047-8fff29c16df0",
+      "name": "TavilySearch",
+      "credentials": {
+        "tavilyApi": {
+          "id": "gak9blSATlu126ex",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        -304
+      ],
+      "id": "43f8292c-e61a-4e33-9b25-aa4cef218a06",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email": {
+      "main": [
+        []
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Planner",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Planner": {
+      "main": [
+        []
+      ]
+    },
+    "Writer": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Agent": {
+      "main": [
+        [
+          {
+            "node": "Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TavilySearch": {
+      "ai_tool": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Research Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b32b1130-bdbb-4755-9d1a-31f8edae29d1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e70820f2742d7000c44b32aea53380fa0e7b662ea581df723d539ba883d45b95"
+  },
+  "id": "xyeNiQdlfgN84UyF",
+  "tags": []
+}
